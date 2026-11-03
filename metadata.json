@@ -1,0 +1,6 @@
+{
+  "name": "Attend AI",
+  "description": "Find the Bug. Fix the Code. Improve Your Skills. An AI-powered coding practice and debugging platform for HTML, CSS, and JavaScript challenges.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
