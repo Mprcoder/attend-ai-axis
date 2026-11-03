@@ -61,7 +61,7 @@ The main application is the React app in `src/`, served by the Express API in `s
 
 ```powershell
 # Install dependencies
-npm install
+npm install --legacy-peer-deps
 
 # Start the full-stack Express + Vite server on port 3000
 npm run dev
