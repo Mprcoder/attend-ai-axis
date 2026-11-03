@@ -51,10 +51,110 @@ import {
   chatWithOllama,
   OllamaServiceError,
 } from './src/services/ollamaService.ts';
+import {
+  openStandaloneChatStream,
+  readStandaloneChatStream,
+  StandaloneChatbotError,
+} from './src/services/standaloneChatbotService.ts';
 dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
+
+// Independent, stateless chatbot endpoint. Keep this above the API database middleware.
+app.post('/api/assistant/chat', async (req, res) => {
+  const { messages } = req.body ?? {};
+  if (
+    !Array.isArray(messages) ||
+    messages.length === 0 ||
+    messages.length > 10 ||
+    messages.some(
+      (message) =>
+        !message ||
+        !['user', 'assistant'].includes(message.role) ||
+        typeof message.content !== 'string' ||
+        message.content.trim().length === 0 ||
+        message.content.length > 1500
+    ) ||
+    messages[messages.length - 1]?.role !== 'user'
+  ) {
+    return res.status(400).json({
+      error: 'Send a message and up to 9 previous conversation messages.',
+    });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90_000);
+  res.on('close', () => {
+    if (!res.writableEnded) controller.abort();
+  });
+
+  try {
+    const stream = await openStandaloneChatStream(
+      messages.map((message: { role: 'user' | 'assistant'; content: string }) => ({
+        role: message.role,
+        content: message.content,
+      })),
+      controller.signal
+    );
+    if (res.destroyed || controller.signal.aborted) return;
+
+    res.status(200).set({
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders();
+
+    for await (const content of readStandaloneChatStream(stream)) {
+      if (res.destroyed || controller.signal.aborted) return;
+      res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+    }
+
+    if (!res.destroyed && !controller.signal.aborted) {
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    }
+  } catch (error) {
+    if (res.destroyed) return;
+    const assistantError =
+      error instanceof StandaloneChatbotError
+        ? error
+        : controller.signal.aborted
+          ? new StandaloneChatbotError(
+              'The assistant took too long to respond. Please try again.',
+              503
+            )
+          : null;
+
+    if (res.headersSent) {
+      if (assistantError) {
+        res.write(`data: ${JSON.stringify({ error: assistantError.message })}\n\n`);
+      } else {
+        console.error('Standalone assistant stream failed:', error);
+        res.write(
+          `data: ${JSON.stringify({
+            error: 'The assistant could not complete the request. Please try again.',
+          })}\n\n`
+        );
+      }
+      res.end();
+      return;
+    }
+
+    if (assistantError) {
+      res.status(assistantError.statusCode).json({ error: assistantError.message });
+    } else {
+      console.error('Standalone assistant request failed:', error);
+      res.status(502).json({
+        error: 'The assistant could not complete the request. Please try again.',
+      });
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+});
 
 let isSeeded = false;
 async function ensureDatabaseReady() {

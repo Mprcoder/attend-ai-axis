@@ -16,6 +16,20 @@
   }
 }
 
+.standalone-chatbot-widget {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 100;
+}
+
+@media (min-width: 640px) {
+  .standalone-chatbot-widget {
+    right: 1.5rem;
+    bottom: 1.5rem;
+  }
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
@@ -142,7 +156,7 @@
 }
 
 .app-theme [class~="text-white"] {
-  color: #2e3c51;
+  color: #e1e4e8;
 }
 
 .app-theme [class~="bg-indigo-600"][class~="text-white"],

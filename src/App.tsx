@@ -38,6 +38,7 @@ import { SettingsView } from './components/SettingsView.tsx';
 import { LeaderboardView } from './components/LeaderboardView.tsx';
 import { SubmissionsHistoryView } from './components/SubmissionsHistoryView.tsx';
 import { AdminView } from './components/AdminView.tsx';
+import { StandaloneChatbot } from './components/StandaloneChatbot.tsx';
 
 const AUTH_PAGES = new Set([
   'login',
@@ -614,8 +615,11 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+      <StandaloneChatbot />
+    </>
   );
 }

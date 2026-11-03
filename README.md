@@ -90,3 +90,17 @@ Invoke-RestMethod `
 ```
 
 The API reports a clear service error if Ollama is stopped or `llama3.2:3b` is missing. Submission evaluation and progress recording continue even when local AI is offline.
+
+## Standalone AI Assistant
+
+Open the floating **AI Assistant** at the bottom-right of the website to ask general questions. Its dedicated `/api/assistant/chat` endpoint streams Ollama responses progressively and uses only the conversation transcript; it does not read authentication, profile, challenge, or database data.
+
+To test the streaming endpoint directly:
+
+```powershell
+curl.exe -N -X POST "http://localhost:3000/api/assistant/chat" `
+  -H "Content-Type: application/json" `
+  --data-raw '{"messages":[{"role":"user","content":"What is Python?"}]}'
+```
+
+The response is sent as Server-Sent Events. Keep Ollama running with `llama3.2:3b` available.
